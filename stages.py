@@ -3,12 +3,12 @@ from scm_pipeline import ASDFFile, ParquetFile
 from .types import TextFile, YamlFile
 
 
-class detectionStage(PipelineStage):
+class DetectionStage(PipelineStage):
     """
     This pipeline element is for detecting objects via SEP
     """
 
-    name = "detectionStage"
+    name = "DetectionStage"
     inputs = [("Exposure", ASDFFile)]
     outputs = [("object_catalog", ParquetFile)]
     config_options = {"detection_threshold": float}
@@ -20,19 +20,19 @@ class detectionStage(PipelineStage):
 
        
         filename = self.get_input("Exposure")
-        print(f"detectionStage reading from {filename}")
+        print(f" DetectionStage reading from {filename}")
         blah = process(filename)
 
         filename = self.get_output("object_catalog")
-        print(f" detectionStage writing to {filename}")
+        print(f" DetectionStage writing to {filename}")
         open(filename, "w").write(blah)
 
-class selectionStage(PipelineStage):
+class SelectionStage(PipelineStage):
     """
     This pipeline element is for selecting stars for psf fitting
     """
 
-    name = "selectionStage"
+    name = "SelectionStage"
     inputs = [("object_catalog", ParquetFile)]
     outputs = [("star_catalog", ParquetFile)]
     config_options = {"magnitude_cut": float}
@@ -44,11 +44,11 @@ class selectionStage(PipelineStage):
 
        
         filename = self.get_input("object_catalog")
-        print(f"selectionStage reading from {filename}")
+        print(f" SelectionStage reading from {filename}")
         blah = process(filename)
 
         filename = self.get_output("star_catalog")
-        print(f" selectionStage writing to {filename}")
+        print(f" SelectionStage writing to {filename}")
         open(filename, "w").write(blah)
 
 
