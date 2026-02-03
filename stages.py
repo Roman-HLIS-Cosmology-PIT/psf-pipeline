@@ -1,0 +1,58 @@
+from ceci import PipelineStage
+from scm_pipeline import ASDFFile, ParquetFile
+from .types import TextFile, YamlFile
+
+
+class detectionStage(PipelineStage):
+    """
+    This pipeline element is for detecting objects via SEP
+    """
+
+    name = "detectionStage"
+    inputs = [("Exposure", ASDFFile)]
+    outputs = [("object_catalog", ParquetFile)]
+    config_options = {"detection_threshold": float}
+
+    def run(self):
+        # Retrieve configuration:
+        my_config = self.config
+        print("Here is my configuration :", my_config)
+
+       
+        filename = self.get_input("Exposure")
+        print(f"detectionStage reading from {filename}")
+        blah = process(filename)
+
+        filename = self.get_output("object_catalog")
+        print(f" detectionStage writing to {filename}")
+        open(filename, "w").write(blah)
+
+class selectionStage(PipelineStage):
+    """
+    This pipeline element is for selecting stars for psf fitting
+    """
+
+    name = "selectionStage"
+    inputs = [("object_catalog", ParquetFile)]
+    outputs = [("star_catalog", ParquetFile)]
+    config_options = {"magnitude_cut": float}
+
+    def run(self):
+        # Retrieve configuration:
+        my_config = self.config
+        print("Here is my configuration :", my_config)
+
+       
+        filename = self.get_input("object_catalog")
+        print(f"selectionStage reading from {filename}")
+        blah = process(filename)
+
+        filename = self.get_output("star_catalog")
+        print(f" selectionStage writing to {filename}")
+        open(filename, "w").write(blah)
+
+
+
+
+if __name__ == "__main__":
+    cls = PipelineStage.main()
