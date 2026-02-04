@@ -7,5 +7,13 @@ deblend_nthresh: 32
 deblend_cont: 0.005
 filter_type: conv
 filter_kernel: path/to/kernel.txt
-photometry_method: kron
+photometry_method:
+  kron:
+    multiplicative_factor: 2.5
+  aperture:
+    radii: 
+      - 3
+      - 5
+      - 7
+
 

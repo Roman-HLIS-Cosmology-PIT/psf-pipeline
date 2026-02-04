@@ -1,5 +1,5 @@
-from ceci import PipelineStage
-from scm_pipeline import ASDFFile, ParquetFile
+from scm_pipeline import PipelineStage
+from scm_pipeline.data_types import ASDFFile, ParquetFile
 from .types import TextFile, YamlFile
 
 

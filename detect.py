@@ -176,7 +176,36 @@ def get_output_cat(n_obj):
     return out
 
 def read_kernel(kernel_file_name):
-    return
+    kernel = np.loadtxt(kernel_file_name)
+    return kernel
+
+
+def _normalize_photometry_config(phot_cfg):
+    """
+    Accept either:
+      - photometry_method: 'kron'
+      - photometry_method: {kron: {...}, aperture: {...}}
+    Return dict of methods -> options dict.
+    """
+    if phot_cfg is None:
+        return {}
+    if isinstance(phot_cfg, str):
+        return {phot_cfg: {}}
+    if isinstance(phot_cfg, dict):
+        # already a mapping of methods -> options
+        return phot_cfg
+    raise TypeError(f"Unsupported photometry_method config type: {type(phot_cfg)}")
+
+
+def _add_photometry_columns(cat_dict, key_prefix, flux, fluxerr, flags, flux_radius):
+    cat_dict[f"{key_prefix}_flux"] = flux
+    cat_dict[f"{key_prefix}_fluxerr"] = fluxerr
+    cat_dict[f"{key_prefix}_flags"] = flags
+    with np.errstate(divide="ignore", invalid="ignore"):
+        snr = np.where(fluxerr > 0, flux / fluxerr, -10.0)
+    cat_dict[f"{key_prefix}_snr"] = snr
+    cat_dict[f"{key_prefix}_flux_radius"] = flux_radius
+    return cat_dict
 
 
 def get_cat(img, weight, config_file_name, header=None, wcs=None, mask=None):
@@ -217,8 +246,25 @@ def get_cat(img, weight, config_file_name, header=None, wcs=None, mask=None):
     )
     n_obj = len(obj)
     seg_id = np.arange(1, n_obj + 1, dtype=np.int32)
-    
-    if config["photometry_method"] == 'kron':
+
+    # NOTE: keep old placeholders if other code relies on them, but prefer new per-method columns
+    fluxes = np.ones(n_obj) * -10.0
+    fluxerrs = np.ones(n_obj) * -10.0
+    flux_rad = np.ones(n_obj) * -10.0
+    snr = np.ones(n_obj) * -10.0
+    flags = np.ones(n_obj, dtype=np.int64) * 64
+    flags_rad = np.ones(n_obj, dtype=np.int64) * 64
+
+    phot_cfg = _normalize_photometry_config(config.get("photometry_method"))
+
+    # This dictionary will be merged into the output catalog/table later
+    phot_cols = {}
+
+    # ---- Kron photometry (per config) ----
+    if "kron" in phot_cfg:
+        kron_opts = phot_cfg.get("kron", {}) or {}
+        kron_mult = float(kron_opts.get("multiplicative_factor", 2.5))
+
         kronrads, krflags = sep.kron_radius(
             img,
             obj["x"],
@@ -231,50 +277,89 @@ def get_cat(img, weight, config_file_name, header=None, wcs=None, mask=None):
             segmap=seg,
             mask=mask_rms,
         )
-    fluxes = np.ones(n_obj) * -10.0
-    fluxerrs = np.ones(n_obj) * -10.0
-    flux_rad = np.ones(n_obj) * -10.0
-    snr = np.ones(n_obj) * -10.0
-    flags = np.ones(n_obj, dtype=np.int64) * 64
-    flags_rad = np.ones(n_obj, dtype=np.int64) * 64
 
-    good_flux = (
-        (kronrads > 0) # if kron photometry is not going to be the only option, it needs to be changed
-        & (obj["b"] > 0)
-        & (obj["a"] >= obj["b"])
-        & (obj["theta"] >= -np.pi / 2)
-        & (obj["theta"] <= np.pi / 2)
-    )
-    fluxes[good_flux], fluxerrs[good_flux], flags[good_flux] = sep.sum_ellipse(
-        img,
-        obj["x"][good_flux],
-        obj["y"][good_flux],
-        obj["a"][good_flux],
-        obj["b"][good_flux],
-        obj["theta"][good_flux],
-        2.5 * kronrads[good_flux], # this one too. (same as line 242)
-        err=rms,
-        subpix=1,
-        seg_id=seg_id[good_flux],
-        segmap=seg,
-        mask=mask_rms,
-    )
+        good_kron = (
+            (kronrads > 0)
+            & (obj["b"] > 0)
+            & (obj["a"] >= obj["b"])
+            & (obj["theta"] >= -np.pi/2)
+            & (obj["theta"] <= np.pi/2)
+        )
+        kflux = np.ones(n_obj) * -10.0
+        kfluxerr = np.ones(n_obj) * -10.0
+        kflags = np.ones(n_obj, dtype=np.int64) * 64
+        kflags[good_kron] = krflags[good_kron]
+        kflux_rad = np.ones(n_obj) * -10.0
+        kflags_rad = np.ones(n_obj, dtype=np.int64) * 64
 
-    flux_rad[good_flux], flags_rad[good_flux] = sep.flux_radius(
-        img,
-        obj["x"][good_flux],
-        obj["y"][good_flux],
-        6.0 * obj["a"][good_flux],
-        0.5,
-        normflux=fluxes[good_flux],
-        subpix=1,
-        seg_id=seg_id[good_flux],
-        segmap=seg,
-        mask=mask_rms,
-    )
+        if np.any(good_kron):
+            kflux_g, kfluxerr_g, kflag_g = sep.sum_ellipse(
+                img,
+                obj["x"][good_kron],
+                obj["y"][good_kron],
+                obj["a"][good_kron],
+                obj["b"][good_kron],
+                obj["theta"][good_kron],
+                kron_mult * kronrads[good_kron],
+                err = rms,
+                subpix = 1,
+                seg_id=seg_id[good_kron],
+                segmap=seg,
+                mask=mask_rms,
+            )
+            kflux[good_kron] = kflux_g
+            kfluxerr[good_kron] = kfluxerr_g
+            kflags[good_kron] = kflag_g
+        
+            kflux_rad[good_kron], kflags_rad[good_kron] = sep.flux_radius(
+                img,
+                obj["x"][good_kron],
+                obj["y"][good_kron],
+                6.0 * obj["a"][good_kron],
+                0.5,
+                normflux=kflux[good_kron],
+                subpix=1,
+                seg_id=seg_id[good_kron],
+                segmap=seg,
+                mask=mask_rms,
+            )    
+        kflags_tot = kflags | kflags_rad | krflags
+        phot_cols = _add_photometry_columns(phot_cols, "kron", kflux, kfluxerr, kflags_tot, kflux_rad)
+        phot_cols["kron_radius"] = kronrads
+        phot_cols["kron_multiplicative_factor"] = np.full(n_obj, kron_mult, dtype=float)
 
-    good_snr = (fluxes > 0) & (fluxerrs > 0)
-    snr[good_snr] = fluxes[good_snr] / fluxerrs[good_snr]
+        # Optional: keep legacy single-method outputs if downstream expects them
+        fluxes, fluxerrs, flags = kflux, kfluxerr, kflags
+        flux_rad = kflux_rad
+        flags_rad = kflags_rad
+        with np.errstate(divide="ignore", invalid="ignore"):
+            snr = np.where(fluxerrs > 0, fluxes / fluxerrs, -10.0)
+
+    # ---- Aperture photometry (per config) ----
+    if "aperture" in phot_cfg:
+        ap_opts = phot_cfg.get("aperture", {}) or {}
+        radii = ap_opts.get("radii", [])
+        if not isinstance(radii, (list, tuple)) or len(radii) == 0:
+            raise ValueError("photometry_method.aperture.radii must be a non-empty list")
+
+        for r in radii:
+            r = float(r)
+            # sep.sum_circle returns (flux, fluxerr, flag)
+            aflux, afluxerr, aflag = sep.sum_circle(
+                img,
+                obj["x"],
+                obj["y"],
+                r=r,
+                seg_id=seg_id,
+                segmap=seg,
+                mask=mask_rms,
+            )
+            # column-safe name (e.g., aper_r3p0)
+            aflux_rad = np.ones(n_obj) * r
+            rtag = str(r).replace(".", "p")
+            key = f"aper_r{rtag}"
+            phot_cols = _add_photometry_columns(phot_cols, key, aflux, afluxerr, aflag, aflux_rad)
+            phot_cols[f"{key}_radius"] = np.full(n_obj, r, dtype=float)
 
     ra, dec = wcs.all_pix2world(obj["x"], obj["y"], 0)
 
@@ -312,6 +397,10 @@ def get_cat(img, weight, config_file_name, header=None, wcs=None, mask=None):
     out["flags"] = obj["flag"]
     out["flux_flags"] = krflags | flags | flags_rad
     out["ext_flags"] = ext_flags
+
+    # Merge photometry columns into the output catalog
+    for k, v in phot_cols.items():
+        out[k] = v
 
     return out, seg
     # do we need to take care of the dust extinction at this level?
