@@ -1,0 +1,11 @@
+detection_threshold: 1.2
+background_subtraction: True
+err: rms
+segmentation_map: True
+min_area: 5
+deblend_nthresh: 32
+deblend_cont: 0.005
+filter_type: conv
+filter_kernel: path/to/kernel.txt
+photometry_method: kron
+
