@@ -60,7 +60,7 @@ class ColorAssignmentStage(PipelineStage):
     is found assign mean/median color/SED.
     """
 
-    name = "FittingStage"
+    name = "ColorAssignmentStage"
     inputs = [("star_catalog", ParquetFile), ("sed_library", Directory)]
     outputs = [("color_star_catalog", ParquetFile)]
     config_options = {"magnitude_cut": float}

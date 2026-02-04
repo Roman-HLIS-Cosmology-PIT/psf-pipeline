@@ -15,6 +15,9 @@ from scipy.stats import median_abs_deviation as mad
 
 import yaml
 
+import asdf
+
+
 def load_config(config_file):
     with open(config_file, "r") as f:
         config = yaml.safe_load(f)
@@ -207,10 +210,16 @@ def _add_photometry_columns(cat_dict, key_prefix, flux, fluxerr, flags, flux_rad
     cat_dict[f"{key_prefix}_flux_radius"] = flux_radius
     return cat_dict
 
+def read_asdf(filename):
+    with asdf.open(filename) as af:
+        data = af['data'] # what's going to be formatted like?
+    return data
 
 def get_cat(img, weight, config_file_name, header=None, wcs=None, mask=None):
     config = load_config(config_file_name)
     #Add a function to read image and weights from file
+    img = read_asdf(img)
+    weight = read_asdf(weight) # needs to be changed for better variable naming...
     #TODO!!!
     # NOTE: Might need to look again into this. For now we keep it simple.
     rms = np.zeros_like(weight)
