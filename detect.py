@@ -15,6 +15,9 @@ from scipy.stats import median_abs_deviation as mad
 
 import yaml
 
+import asdf
+
+
 def load_config(config_file):
     with open(config_file, "r") as f:
         config = yaml.safe_load(f)
@@ -178,10 +181,16 @@ def get_output_cat(n_obj):
 def read_kernel(kernel_file_name):
     return
 
+def read_asdf(filename):
+    with asdf.open(filename) as af:
+        data = af['data'] # what's going to be formatted like?
+    return data
 
 def get_cat(img, weight, config_file_name, header=None, wcs=None, mask=None):
     config = load_config(config_file_name)
     #Add a function to read image and weights from file
+    img = read_asdf(img)
+    weight = read_asdf(weight) # needs to be changed for better variable naming...
     #TODO!!!
     # NOTE: Might need to look again into this. For now we keep it simple.
     rms = np.zeros_like(weight)
