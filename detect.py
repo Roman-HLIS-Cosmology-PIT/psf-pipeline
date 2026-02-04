@@ -21,7 +21,7 @@ def load_config(config_file):
     return config
 
 
-
+# is the future roman_kernel going to be harded coded or will it be provided as a separate input (txt) file?
 DES_KERNEL = np.array(
     [
         [
@@ -239,7 +239,7 @@ def get_cat(img, weight, config_file_name, header=None, wcs=None, mask=None):
     flags_rad = np.ones(n_obj, dtype=np.int64) * 64
 
     good_flux = (
-        (kronrads > 0)
+        (kronrads > 0) # if kron photometry is not going to be the only option, it needs to be changed
         & (obj["b"] > 0)
         & (obj["a"] >= obj["b"])
         & (obj["theta"] >= -np.pi / 2)
@@ -252,7 +252,7 @@ def get_cat(img, weight, config_file_name, header=None, wcs=None, mask=None):
         obj["a"][good_flux],
         obj["b"][good_flux],
         obj["theta"][good_flux],
-        2.5 * kronrads[good_flux],
+        2.5 * kronrads[good_flux], # this one too. (same as line 242)
         err=rms,
         subpix=1,
         seg_id=seg_id[good_flux],
@@ -314,3 +314,4 @@ def get_cat(img, weight, config_file_name, header=None, wcs=None, mask=None):
     out["ext_flags"] = ext_flags
 
     return out, seg
+    # do we need to take care of the dust extinction at this level?
