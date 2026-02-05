@@ -8,14 +8,16 @@ import numba as nb
 import sep
 
 from astropy.wcs import WCS
+from astropy.io import fits
 
 #from sf_tools.image.stamp import FetchStamps
 
 from scipy.stats import median_abs_deviation as mad
 
 import yaml
+import matplotlib.pyplot as plt
 
-import asdf
+#import asdf
 
 
 def load_config(config_file):
@@ -179,7 +181,9 @@ def get_output_cat(n_obj):
     return out
 
 def read_kernel(kernel_file_name):
-    kernel = np.loadtxt(kernel_file_name)
+    ## overwrite to DES kernel for now
+    #kernel = np.loadtxt(kernel_file_name)
+    kernel = DES_KERNEL
     return kernel
 
 
@@ -215,11 +219,22 @@ def read_asdf(filename):
         data = af['data'] # what's going to be formatted like?
     return data
 
-def get_cat(img, weight, config_file_name, header=None, wcs=None, mask=None):
+def read_fits(filename, sca):
+    with fits.open('ffov_13906_test_v251020.fits') as hdul:
+        data = hdul[sca].data
+        header = hdul[sca].header
+    return data, header
+def get_weights_from_image(img):
+    weights = np.ones(img.shape)
+    return weights
+    
+
+def get_cat(img_filename, config_file_name,sca = 1, header=None, wcs=None, mask=None):
     config = load_config(config_file_name)
     #Add a function to read image and weights from file
-    img = read_asdf(img)
-    weight = read_asdf(weight) # needs to be changed for better variable naming...
+    img, header = read_fits(img_filename, sca)
+    img = img.astype(float)
+    weight = get_weights_from_image(img) # needs to be changed for better variable naming...
     #TODO!!!
     # NOTE: Might need to look again into this. For now we keep it simple.
     rms = np.zeros_like(weight)
@@ -237,15 +252,22 @@ def get_cat(img, weight, config_file_name, header=None, wcs=None, mask=None):
         wcs = WCS(header)
 
     # NOTE: Sometimes we end up with a non-zero background, I don't know why..
-    if config["remove_background"]:
+    if config["background_subtraction"]:
         bkg = sep.Background(img, mask=mask_rms).globalback
     else:
         bkg = np.zeros_like(img) #will fix later
 
+    rms = np.zeros_like(weight)
+    mask_rms = np.ones_like(weight)
+    m = np.where(weight > 0)
+    rms[m] = np.sqrt(1 / weight[m])
+    mask_rms[m] = 0
+
+    rms = np.median(np.sqrt(1 / weight[m]))
     obj, seg = sep.extract(
         img - bkg,
         config["detection_threshold"],
-        err=config["rms"],
+        err=rms,
         segmentation_map=config["segmentation_map"],
         minarea=config["min_area"],
         deblend_nthresh=config["deblend_nthresh"],
@@ -408,8 +430,7 @@ def get_cat(img, weight, config_file_name, header=None, wcs=None, mask=None):
     out["ext_flags"] = ext_flags
 
     # Merge photometry columns into the output catalog
-    for k, v in phot_cols.items():
-        out[k] = v
+    #for k, v in phot_cols.items():
+    #    out[k] = v
 
     return out, seg
-    # do we need to take care of the dust extinction at this level?
