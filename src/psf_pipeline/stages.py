@@ -1,6 +1,12 @@
 from scm_pipeline import PipelineStage
-from scm_pipeline.data_types import ASDFFile, ParquetFile
-from .types import TextFile, YamlFile
+from scm_pipeline.data_types import (
+    ASDFFile,
+    ParquetFile,
+    TextFile,
+    YamlFile,
+    Directory,
+)
+from .types import PiffFile
 
 
 class DetectionStage(PipelineStage):
