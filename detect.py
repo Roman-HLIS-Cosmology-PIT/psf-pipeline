@@ -26,7 +26,7 @@ def load_config(config_file):
         config = yaml.safe_load(f)
     return config
 
-
+#DES Kernel is too WIDE, need to generate a more accurate kernel by drawing 1.5 FWHM in galsim
 # is the future roman_kernel going to be harded coded or will it be provided as a separate input (txt) file?
 DES_KERNEL = np.array(
     [
@@ -350,7 +350,7 @@ def get_cat(img_filename, config_file_name,sca = 1, header=None, wcs=None, mask=
                 obj["y"][good_kron],
                 6.0 * obj["a"][good_kron],
                 0.5,
-                normflux=kflux[good_kron],
+                normflux=obj["flux"][good_kron],
                 subpix=1,
                 seg_id=seg_id[good_kron],
                 segmap=seg,
@@ -431,6 +431,7 @@ def get_cat(img_filename, config_file_name,sca = 1, header=None, wcs=None, mask=
     out["flags"] = obj["flag"]
     out["flux_flags"] = krflags | flags | flags_rad
     out["ext_flags"] = ext_flags
+    out["moment_rad"] = 0.5*np.sqrt(obj["x2"]+obj["y2"])
 
     # Merge photometry columns into the output catalog
     for k, v in phot_cols.items():
