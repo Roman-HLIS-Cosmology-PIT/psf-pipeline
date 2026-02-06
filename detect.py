@@ -9,6 +9,7 @@ import sep
 
 from astropy.wcs import WCS
 from astropy.io import fits
+from astropy.table import Table
 
 #from sf_tools.image.stamp import FetchStamps
 
@@ -94,7 +95,7 @@ DES_KERNEL = np.array(
         ],  # noqa
     ]
 )
-
+#will deprecate in favor of astropy Table
 DET_CAT_DTYPE = [
     ("number", np.int64),
     ("npix", np.int64),
@@ -172,7 +173,7 @@ def get_cutout(img, x, y, stamp_size):
         cutout_col,
     )
 
-
+#will deprecate in favor of astropy Table
 def get_output_cat(n_obj):
     out = np.array(
         list(map(tuple, np.zeros((len(DET_CAT_DTYPE), n_obj)).T)),
@@ -242,6 +243,7 @@ def get_cat(img_filename, config_file_name,sca = 1, header=None, wcs=None, mask=
     m = np.where(weight > 0)
     rms[m] = np.sqrt(1 / weight[m])
     mask_rms[m] = 0
+    origin = config.get("wcs_origin", 1)
 
     rms = np.median(np.sqrt(1 / weight[m]))
     # rms = mad(img, scale="normal", axis=(0, 1))
@@ -392,7 +394,7 @@ def get_cat(img_filename, config_file_name,sca = 1, header=None, wcs=None, mask=
             phot_cols = _add_photometry_columns(phot_cols, key, aflux, afluxerr, aflag, aflux_rad)
             phot_cols[f"{key}_radius"] = np.full(n_obj, r, dtype=float)
 
-    ra, dec = wcs.all_pix2world(obj["x"], obj["y"], 0)
+    ra, dec = wcs.all_pix2world(obj["x"], obj["y"], origin)
 
     # Build the equivalent to IMAFLAGS_ISO
     # But you only know if the object is flagged or not, you don't get the flag
@@ -405,7 +407,8 @@ def get_cat(img_filename, config_file_name,sca = 1, header=None, wcs=None, mask=
             if (check_map > seg_id_tmp).any():
                 ext_flags[i] = 1
 
-    out = get_output_cat(n_obj)
+    #out = get_output_cat(n_obj)
+    out = Table()
 
     out["number"] = seg_id
     out["npix"] = obj["npix"]
@@ -430,7 +433,7 @@ def get_cat(img_filename, config_file_name,sca = 1, header=None, wcs=None, mask=
     out["ext_flags"] = ext_flags
 
     # Merge photometry columns into the output catalog
-    #for k, v in phot_cols.items():
-    #    out[k] = v
+    for k, v in phot_cols.items():
+        out[k] = v
 
     return out, seg
