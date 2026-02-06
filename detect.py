@@ -431,7 +431,7 @@ def get_cat(img_filename, config_file_name,sca = 1, header=None, wcs=None, mask=
     out["flags"] = obj["flag"]
     out["flux_flags"] = krflags | flags | flags_rad
     out["ext_flags"] = ext_flags
-    out["moment_rad"] = 0.5*np.sqrt(obj["xx"]+obj["yy"])
+    out["moment_rad"] = 0.5*np.sqrt(out["xx"]+out["yy"])
 
     # Merge photometry columns into the output catalog
     for k, v in phot_cols.items():
