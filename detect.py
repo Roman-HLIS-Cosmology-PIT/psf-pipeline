@@ -259,6 +259,8 @@ def get_cat(img_filename, config_file_name,sca = 1, header=None, wcs=None, mask=
     else:
         bkg = np.zeros_like(img) #will fix later
 
+    img_sub = img - bkg
+
     rms = np.zeros_like(weight)
     mask_rms = np.ones_like(weight)
     m = np.where(weight > 0)
@@ -267,7 +269,7 @@ def get_cat(img_filename, config_file_name,sca = 1, header=None, wcs=None, mask=
 
     rms = np.median(np.sqrt(1 / weight[m]))
     obj, seg = sep.extract(
-        img - bkg,
+        img_sub,
         config["detection_threshold"],
         err=rms,
         segmentation_map=config["segmentation_map"],
@@ -299,7 +301,7 @@ def get_cat(img_filename, config_file_name,sca = 1, header=None, wcs=None, mask=
         kron_mult = float(kron_opts.get("multiplicative_factor", 2.5))
 
         kronrads, krflags = sep.kron_radius(
-            img,
+            img_sub,
             obj["x"],
             obj["y"],
             obj["a"],
@@ -327,7 +329,7 @@ def get_cat(img_filename, config_file_name,sca = 1, header=None, wcs=None, mask=
 
         if np.any(good_kron):
             kflux_g, kfluxerr_g, kflag_g = sep.sum_ellipse(
-                img,
+                img_sub,
                 obj["x"][good_kron],
                 obj["y"][good_kron],
                 obj["a"][good_kron],
@@ -345,7 +347,7 @@ def get_cat(img_filename, config_file_name,sca = 1, header=None, wcs=None, mask=
             kflags[good_kron] = kflag_g
         
             kflux_rad[good_kron], kflags_rad[good_kron] = sep.flux_radius(
-                img,
+                img_sub,
                 obj["x"][good_kron],
                 obj["y"][good_kron],
                 6.0 * obj["a"][good_kron],
@@ -379,7 +381,7 @@ def get_cat(img_filename, config_file_name,sca = 1, header=None, wcs=None, mask=
             r = float(r)
             # sep.sum_circle returns (flux, fluxerr, flag)
             aflux, afluxerr, aflag = sep.sum_circle(
-                img,
+                img_sub,
                 obj["x"],
                 obj["y"],
                 r=r,
