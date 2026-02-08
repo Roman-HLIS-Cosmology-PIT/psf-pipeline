@@ -6,7 +6,7 @@ min_area: 5
 deblend_nthresh: 32
 deblend_cont: 0.005
 filter_type: conv
-filter_kernel: path/to/kernel.txt
+filter_kernel: detection_kernels/roman_kernel_FWHM_1.2_10x10.txt
 photometry_method:
   kron:
     multiplicative_factor: 2.5

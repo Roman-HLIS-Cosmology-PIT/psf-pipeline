@@ -16,7 +16,6 @@ from astropy.table import Table
 from scipy.stats import median_abs_deviation as mad
 
 import yaml
-import matplotlib.pyplot as plt
 
 #import asdf
 
@@ -26,75 +25,7 @@ def load_config(config_file):
         config = yaml.safe_load(f)
     return config
 
-#DES Kernel is too WIDE, need to generate a more accurate kernel by drawing 1.5 FWHM in galsim
-# is the future roman_kernel going to be harded coded or will it be provided as a separate input (txt) file?
-DES_KERNEL = np.array(
-    [
-        [
-            0.004963,
-            0.021388,
-            0.051328,
-            0.068707,
-            0.051328,
-            0.021388,
-            0.004963,
-        ],  # noqa
-        [
-            0.021388,
-            0.092163,
-            0.221178,
-            0.296069,
-            0.221178,
-            0.092163,
-            0.021388,
-        ],  # noqa
-        [
-            0.051328,
-            0.221178,
-            0.530797,
-            0.710525,
-            0.530797,
-            0.221178,
-            0.051328,
-        ],  # noqa
-        [
-            0.068707,
-            0.296069,
-            0.710525,
-            0.951108,
-            0.710525,
-            0.296069,
-            0.068707,
-        ],  # noqa
-        [
-            0.051328,
-            0.221178,
-            0.530797,
-            0.710525,
-            0.530797,
-            0.221178,
-            0.051328,
-        ],  # noqa
-        [
-            0.021388,
-            0.092163,
-            0.221178,
-            0.296069,
-            0.221178,
-            0.092163,
-            0.021388,
-        ],  # noqa
-        [
-            0.004963,
-            0.021388,
-            0.051328,
-            0.068707,
-            0.051328,
-            0.021388,
-            0.004963,
-        ],  # noqa
-    ]
-)
+
 #will deprecate in favor of astropy Table
 DET_CAT_DTYPE = [
     ("number", np.int64),
@@ -183,8 +114,9 @@ def get_output_cat(n_obj):
 
 def read_kernel(kernel_file_name):
     ## overwrite to DES kernel for now
-    #kernel = np.loadtxt(kernel_file_name)
-    kernel = DES_KERNEL
+    kernel = np.loadtxt(kernel_file_name)
+    print ('kernel: ', kernel_file_name)
+    #kernel = DES_KERNEL
     return kernel
 
 
@@ -440,3 +372,12 @@ def get_cat(img_filename, config_file_name,sca = 1, header=None, wcs=None, mask=
         out[k] = v
 
     return out, seg
+
+if __name__ == "__main__":
+    import matplotlib.pyplot as plt
+    out, seg = get_cat('', 'detect_config.yaml')
+
+    plt.scatter(out['flux_radius'], 30-2.5*np.log10(out['flux']), alpha=0.3)
+    plt.show()
+
+
