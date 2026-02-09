@@ -358,8 +358,10 @@ def get_cat(img_filename, config_file_name,sca = 1, header=None, wcs=None, mask=
     out["npix"] = obj["npix"]
     out["ra"] = ra
     out["dec"] = dec
-    out["x"] = obj["x"]/np.sqrt(fluxes)
-    out["y"] = obj["y"]/np.sqrt(fluxes)
+    out["x"] = obj["x"]
+    out["y"] = obj["y"]
+    out["x_mom"] = obj["x"]/np.sqrt(fluxes)
+    out["y_mom"] = obj["y"]/np.sqrt(fluxes)
     out["a"] = obj["a"]
     out["b"] = obj["b"]
     out["xx"] = obj["x2"]/fluxes
