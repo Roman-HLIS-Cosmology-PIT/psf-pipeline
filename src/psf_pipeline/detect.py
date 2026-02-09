@@ -231,6 +231,7 @@ def get_cat(img_filename, config_file_name,sca = 1, header=None, wcs=None, mask=
     if "kron" in phot_cfg:
         kron_opts = phot_cfg.get("kron", {}) or {}
         kron_mult = float(kron_opts.get("multiplicative_factor", 2.5))
+        phot_flux_frac = float(kron_opts.get("flux_rad_fraction", 0.5))
 
         kronrads, krflags = sep.kron_radius(
             img_sub,
@@ -248,7 +249,7 @@ def get_cat(img_filename, config_file_name,sca = 1, header=None, wcs=None, mask=
         good_kron = (
             (kronrads > 0)
             & (obj["b"] > 0)
-            & (obj["a"] >= obj["b"])
+            & (obj["a"] >= 0) #relaxing kron condition on a to allow circular sources
             & (obj["theta"] >= -np.pi/2)
             & (obj["theta"] <= np.pi/2)
         )
@@ -276,16 +277,16 @@ def get_cat(img_filename, config_file_name,sca = 1, header=None, wcs=None, mask=
             )
             kflux[good_kron] = kflux_g
             kfluxerr[good_kron] = kfluxerr_g
-            kflags[good_kron] = kflag_g
+            kflags[good_kron] |= kflag_g
         
             kflux_rad[good_kron], kflags_rad[good_kron] = sep.flux_radius(
                 img_sub,
                 obj["x"][good_kron],
                 obj["y"][good_kron],
                 6.0 * obj["a"][good_kron],
-                0.5,
-                normflux=obj["flux"][good_kron],
-                subpix=1,
+                phot_flux_frac,
+                normflux=kflux_g, #should be correct implementation of normflux
+                subpix=5,
                 seg_id=seg_id[good_kron],
                 segmap=seg,
                 mask=mask_rms,
@@ -295,8 +296,17 @@ def get_cat(img_filename, config_file_name,sca = 1, header=None, wcs=None, mask=
         phot_cols["kron_radius"] = kronrads
         phot_cols["kron_multiplicative_factor"] = np.full(n_obj, kron_mult, dtype=float)
 
+        #For objects where the radius is too small for the Kron radius, we replicate Source Extractor behavior as follows
+        r_min = config.get("min_radius", 1.75)
+        use_circle = kronrads * np.sqrt(obj["a"] * obj["b"]) < r_min    
+        cflux, cfluxerr, cflag = sep.sum_circle(img_sub, obj["x"][use_circle], obj["y"][use_circle],
+                                                r_min, subpix = 1)
+        kflux[use_circle] = cflux
+        kfluxerr[use_circle] = cfluxerr
+        kflags_tot[use_circle] = cflag 
+
         # Optional: keep legacy single-method outputs if downstream expects them
-        fluxes, fluxerrs, flags = kflux, kfluxerr, kflags
+        fluxes, fluxerrs, flags = kflux, kfluxerr, kflags_tot
         flux_rad = kflux_rad
         flags_rad = kflags_rad
         with np.errstate(divide="ignore", invalid="ignore"):
