@@ -167,8 +167,8 @@ def get_cat(img_filename, config_file_name,sca = 1, header=None, wcs=None, mask=
 
     rms = np.median(np.sqrt(1 / weight[m]))
     obj, seg = sep.extract(
-        img_sub,
-        config["detection_threshold"],
+        data=img_sub,
+        thresh=config["detection_threshold"],
         err=rms,
         segmentation_map=config["segmentation_map"],
         minarea=config["min_area"],
@@ -200,13 +200,13 @@ def get_cat(img_filename, config_file_name,sca = 1, header=None, wcs=None, mask=
         phot_flux_frac = float(kron_opts.get("flux_rad_fraction", 0.5))
 
         kronrads, krflags = sep.kron_radius(
-            img_sub,
-            obj["x"],
-            obj["y"],
-            obj["a"],
-            obj["b"],
-            obj["theta"],
-            6.0,
+            data=img_sub,
+            x=obj["x"],
+            y=obj["y"],
+            a=obj["a"],
+            b=obj["b"],
+            theta=obj["theta"],
+            r=6.0,
             seg_id=seg_id,
             segmap=seg,
             mask=mask_rms,
@@ -228,13 +228,13 @@ def get_cat(img_filename, config_file_name,sca = 1, header=None, wcs=None, mask=
 
         if np.any(good_kron):
             kflux_g, kfluxerr_g, kflag_g = sep.sum_ellipse(
-                img_sub,
-                obj["x"][good_kron],
-                obj["y"][good_kron],
-                obj["a"][good_kron],
-                obj["b"][good_kron],
-                obj["theta"][good_kron],
-                kron_mult * kronrads[good_kron],
+                data=img_sub,
+                x=obj["x"][good_kron],
+                y=obj["y"][good_kron],
+                a=obj["a"][good_kron],
+                b=obj["b"][good_kron],
+                theta=obj["theta"][good_kron],
+                r=kron_mult * kronrads[good_kron],
                 err = rms,
                 subpix = 1,
                 seg_id=seg_id[good_kron],
@@ -246,11 +246,11 @@ def get_cat(img_filename, config_file_name,sca = 1, header=None, wcs=None, mask=
             kflags[good_kron] |= kflag_g
         
             kflux_rad[good_kron], kflags_rad[good_kron] = sep.flux_radius(
-                img_sub,
-                obj["x"][good_kron],
-                obj["y"][good_kron],
-                6.0 * obj["a"][good_kron],
-                phot_flux_frac,
+                data=img_sub,
+                x=obj["x"][good_kron],
+                y=obj["y"][good_kron],
+                rmax=6.0 * obj["a"][good_kron],
+                frac=phot_flux_frac,
                 normflux=kflux_g, #should be correct implementation of normflux
                 subpix=5,
                 seg_id=seg_id[good_kron],
@@ -289,9 +289,9 @@ def get_cat(img_filename, config_file_name,sca = 1, header=None, wcs=None, mask=
             r = float(r)
             # sep.sum_circle returns (flux, fluxerr, flag)
             aflux, afluxerr, aflag = sep.sum_circle(
-                img_sub,
-                obj["x"],
-                obj["y"],
+                data=img_sub,
+                x=obj["x"],
+                y=obj["y"],
                 r=r,
                 seg_id=seg_id,
                 segmap=seg,
