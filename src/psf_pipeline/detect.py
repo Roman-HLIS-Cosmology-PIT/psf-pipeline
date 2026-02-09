@@ -26,32 +26,6 @@ def load_config(config_file):
     return config
 
 
-#will deprecate in favor of astropy Table
-DET_CAT_DTYPE = [
-    ("number", np.int64),
-    ("npix", np.int64),
-    ("ra", np.float64),
-    ("dec", np.float64),
-    ("x", np.float64),
-    ("y", np.float64),
-    ("a", np.float64),
-    ("b", np.float64),
-    ("xx", np.float64),
-    ("yy", np.float64),
-    ("xy", np.float64),
-    ("elongation", np.float64),
-    ("ellipticity", np.float64),
-    ("kronrad", np.float64),
-    ("flux", np.float64),
-    ("flux_err", np.float64),
-    ("flux_radius", np.float64),
-    ("snr", np.float64),
-    ("flags", np.int64),
-    ("flux_flags", np.int64),
-    ("ext_flags", np.int64),
-]
-
-
 # def get_cutout(img, x, y, stamp_size):
 #     fs = FetchStamps(img, int(stamp_size / 2))
 #     x_round = np.round(x).astype(int)
@@ -103,14 +77,6 @@ def get_cutout(img, x, y, stamp_size):
         cutout_row,
         cutout_col,
     )
-
-#will deprecate in favor of astropy Table
-def get_output_cat(n_obj):
-    out = np.array(
-        list(map(tuple, np.zeros((len(DET_CAT_DTYPE), n_obj)).T)),
-        dtype=DET_CAT_DTYPE,
-    )
-    return out
 
 def read_kernel(kernel_file_name):
     ## overwrite to DES kernel for now
@@ -351,7 +317,6 @@ def get_cat(img_filename, config_file_name,sca = 1, header=None, wcs=None, mask=
             if (check_map > seg_id_tmp).any():
                 ext_flags[i] = 1
 
-    #out = get_output_cat(n_obj)
     out = Table()
 
     out["number"] = seg_id
