@@ -325,13 +325,13 @@ def get_cat(img_filename, config_file_name,sca = 1, header=None, wcs=None, mask=
     out["dec"] = dec
     out["x"] = obj["x"]
     out["y"] = obj["y"]
-    out["x_mom"] = obj["x"]/np.sqrt(fluxes)
-    out["y_mom"] = obj["y"]/np.sqrt(fluxes)
+    #out["x_mom"] = obj["x"]/np.sqrt(fluxes)
+    #out["y_mom"] = obj["y"]/np.sqrt(fluxes)
     out["a"] = obj["a"]
     out["b"] = obj["b"]
-    out["xx"] = obj["x2"]/fluxes
-    out["yy"] = obj["y2"]/fluxes
-    out["xy"] = obj["xy"]/fluxes
+    out["xx"] = obj["x2"]
+    out["yy"] = obj["y2"]
+    out["xy"] = obj["xy"]
     out["elongation"] = obj["a"] / obj["b"]
     out["ellipticity"] = 1.0 - obj["b"] / obj["a"]
     out["kronrad"] = kronrads
@@ -342,7 +342,7 @@ def get_cat(img_filename, config_file_name,sca = 1, header=None, wcs=None, mask=
     out["flags"] = obj["flag"]
     out["flux_flags"] = krflags | flags | flags_rad
     out["ext_flags"] = ext_flags
-    out["moment_rad"] = 0.5*np.sqrt(out["xx"]+out["yy"])
+    out["moment_radius"] = 0.5*np.sqrt(out["xx"]+out["yy"])
 
     # Merge photometry columns into the output catalog
     for k, v in phot_cols.items():
