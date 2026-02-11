@@ -1,5 +1,49 @@
+import time
+import requests
 import numpy as np
+from astroquery.gaia import Gaia
+
 from detect import get_cat
+
+
+def query_gaia_stars_cone(
+    ra_deg, dec_deg, radius_arcmin,
+    *, g_max=21.0, ruwe_max=1.4, g_snr_min=10.0,
+    top=200000,          # <- SERVER-SIDE cap
+    async_job=True,
+    retries=3
+):
+    radius_deg = radius_arcmin / 60.0
+
+    where = [
+        f"1=CONTAINS(POINT('ICRS', ra, dec), CIRCLE('ICRS', {ra_deg}, {dec_deg}, {radius_deg}))",
+        f"phot_g_mean_mag < {g_max}",
+        f"phot_g_mean_flux_over_error > {g_snr_min}",
+        f"ruwe < {ruwe_max}",
+    ]
+
+    query = f"""
+    SELECT TOP {int(top)}
+      source_id, ra, dec, ref_epoch,
+      phot_g_mean_mag, phot_bp_mean_mag, phot_rp_mean_mag,
+      phot_g_mean_flux_over_error, ruwe,
+      pmra, pmdec, parallax
+    FROM gaiadr3.gaia_source
+    WHERE {" AND ".join(where)}
+    """
+
+    last_err = None
+    for k in range(retries + 1):
+        try:
+            job = Gaia.launch_job_async(query) if async_job else Gaia.launch_job(query)
+            return job.get_results()
+        except requests.exceptions.HTTPError as e:
+            last_err = e
+            # quick backoff; often succeeds on the next attempt if it was transient
+            time.sleep(1.5 * (k + 1))
+
+    raise last_err
+
 
 def _mad(x):
     """Median absolute deviation scaled to ~1-sigma for a normal distribution."""
@@ -229,5 +273,23 @@ if __name__ == "__main__":
 
     plt.xlim(0, 6)
     plt.show()
+    plt.close()
+
+    ra0  = 9.5012560332761 # deg
+    dec0 = -43.829285353832 # deg
+    radius_arcmin = 5  # arcmin
+
+    gaia_tab = query_gaia_stars_cone(
+        ra0, dec0, radius_arcmin,
+        g_max=20.5,        # keep Gaia G < 20.5
+        ruwe_max=1.4,      # quality cut
+        g_snr_min=10.0,    # quality cut
+    )
+
+    print(len(gaia_tab))
+    print(gaia_tab.colnames)
+    #print(gaia_tab[:5])
+    print(gaia_tab[:])
+    print (len(gaia_tab))
 
 
