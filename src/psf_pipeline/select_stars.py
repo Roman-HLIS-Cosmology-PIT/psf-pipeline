@@ -60,10 +60,10 @@ def get_stars(
     size_range=None,         # (min, max) sanity range
     nbins=30,
     min_per_bin=50,
-    q_locus=0.04,            # quantile used to trace the stellar locus (lower envelope)
+    q_locus=0.03,            # quantile used to trace the stellar locus (lower envelope)
     poly_order=3,
     use_log_size=True,       # usually helps linearize the locus
-    nsig_low=3.0,            # allow below-locus outliers (cosmics, bad fits) if too large
+    nsig_low=0.5,            # allow below-locus outliers (cosmics, bad fits) if too large
     nsig_high=3.0,           # main separator vs galaxies (galaxies have positive residuals)
     max_abs_low_resid=None,  # optional hard cap on how far below locus you allow (in size units)
     refine=True,             # 2-pass refinement using preliminary star set
@@ -262,6 +262,7 @@ def get_stars(
     return (mask, model) if return_model else mask
 
 if __name__ == "__main__":
+    import sys
     import matplotlib.pyplot as plt
     out, seg = get_cat('', 'detect_config.yaml')
     out = out[np.where(out['flux_radius']>0)]
