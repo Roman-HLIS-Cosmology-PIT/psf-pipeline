@@ -1,0 +1,89 @@
+# This is still a work in progress, but it has most of the features we might eventually need.
+
+input:
+
+    # This was the file name I was testing on locally.
+    # Normally this (and cat_file_name and the output file_name) would be specified
+    # on the command line or overwritten in the python call used by ceci.
+    image_file_name: 'ffov_13906_test_v251020.fits'
+    image_hdu: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18]  # hdu = SCA
+
+    badpix_zeros: True # For now, this is required.
+                       # But we'd like to use real badpix and weight images if possible.
+
+    cat_file_name: 'stars_13906_test_v251105.parquet'
+
+    sed_col: 'sed'                      # The column name with the "color" label
+    sed_file_name: 'sed_mapping.yaml'   # A YAML dict mapping the label to SED file name.
+
+    ra_col: ra
+    dec_col: dec
+    properties:
+        sca: '$@image_num + 1'
+
+    noise: BKGNDVAR   # If we have real weight images, this is not required.
+
+    gain: EQVGAIN     # The gain is taken from the image header.
+
+    sky: median       # If we have real sky subtraction, we don't want this.
+
+    stamp_size: 25
+
+select:
+
+    min_snr: 50           # reject very faint stars
+    max_snr: 500          # don't over-weight very bright stars
+    #max_mask_pixels: 20   # how many pixels in stamp are allowed to be masked.
+    hsm_size_reject: 5    # number of inter-quartile ranges from median to reject size estimate.
+    max_pixel_cut: 50000  # reject stars with a pixel value higher than this. (sort of)
+    min_sep: 1.0          # reject stars with a neighbor closer than 1 arcsec away.
+    #nstars: 100           # limit number of stars to use (useful when debugging)
+
+output:
+    file_name: 'ffov_13906_11.piff'
+
+    stats:    # This is a helpful diagnostic when working on the configuration choices.
+              # We probably won't want this in production.
+        - 
+          type: StarImages
+          file_name: 'stars_11.png'
+          nplot: 0  # all stars; default is a random choice of 10 stars
+
+psf:
+
+    type: Sum
+
+    components:
+
+      -   # The first component has the physical model of the Roman telescope
+          type: RomanOptics
+          filter: H158
+          chromatic: True    # False is faster, and may be sufficient for many purposes
+          max_zernike: 12    # Fit Zernike coefficients 4-12 inclusive.
+          aberration_prior_sigma: 3.e-3  # Gaussian prior on all Zernike coefficients.
+          aberration_interp: constant    # linear is possible but doesn't seem to work better.
+          nproc: 4
+
+      -   # The second component is 5x5 grid of pixels. (Lanczos interpolated)
+          type: Simple 
+          model:
+              type: PixelGrid
+              scale: 0.11
+              size: 5
+          interp:
+              type: BasisPolynomial
+              order: 2
+
+    outliers:
+      -   # Flag objects with large chisq values
+          type: Chisq         
+          nsigma: 10          # This mean the probability equivalent of "10 sigma"
+          max_remove: 0.03    # Remove at most 3% of the objects in each iteration.
+
+      -   # Flag objects with large centroid offsets.
+          type: Centroid      
+          max_offset: 0.2 # arcsec
+
+
+  
+verbose: 1  # Set verbose=2 for a bit more output during the run (useful when debugging)
