@@ -1,6 +1,6 @@
 from scm_pipeline import PipelineStage
 from scm_pipeline.data_types import (
-    ASDFFile,
+    FitsFile,
     ParquetFile,
     TextFile,
     YamlFile,
@@ -13,6 +13,14 @@ class DetectionStage(PipelineStage):
     """
     This pipeline element is for detecting objects via SEP
 
+    Note: If we're using SExtractor for this, it will need FITS files, not ASDF.
+          And so far, Piff only reads FITS image files, so there would need to be
+          some development to enable reading ASDF files instead.
+          So if would be convenient if the impreprocess stages (which come just before
+          this) could output FITS files, rather than ASDF.
+          This may be desired anyway, since the word on the street is that ASDF has
+          much slower I/O than FITS.
+
     Input:
     Exposure is the name of the file has the image for each SCA, weights, and badpix maps.
 
@@ -21,7 +29,7 @@ class DetectionStage(PipelineStage):
     """
 
     name = "DetectionStage"
-    inputs = [("Exposure", ASDFFile),
+    inputs = [("Exposure", FitsFile),
              ]
     outputs = [("object_catalog", ParquetFile),
               ]
@@ -113,7 +121,7 @@ class ColorAssignmentStage(PipelineStage):
               ("sed_library", Directory)
              ]
     outputs = [("color_star_catalog", ParquetFile),
-               ("sed_mapping", YAMLFile),
+               ("sed_mapping", YamlFile),
               ]
     config_options = {"magnitude_cut": float} # placeholder
 
@@ -153,11 +161,11 @@ class FittingStage(PipelineStage):
     import yaml
 
     name = "FittingStage"
-    inputs = [("Exposure", ASDFFile),
+    inputs = [("Exposure", FitsFile),
               ("color_star_catalog", ParquetFile),
               ("sed_library", Directory),
-              ("sed_mapping", YAMLFile),
-              ("piff_config", YAMLFile),
+              ("sed_mapping", YamlFile),
+              ("piff_config", YamlFile),
              ]
     outputs = [("psf_model", PiffFile)]
 
